@@ -1,6 +1,7 @@
 package com.davidwilson.delphi.controllers;
 import com.davidwilson.delphi.entities.Submissions;
 import com.davidwilson.delphi.repositories.SubmissionRepository;
+import com.davidwilson.delphi.services.ExecutionQueueService;
 import com.davidwilson.delphi.services.FileUploadService;
 import com.davidwilson.delphi.services.FileExecutionService;
 
@@ -24,11 +25,13 @@ public class FileUploadController {
 
     private final FileUploadService fileUploadService;
     private final SubmissionRepository submissionRepository;
+    private final ExecutionQueueService executionQueueService;
     Logger logger = Logger.getLogger(FileUploadController.class.getName());
 
-    public FileUploadController(FileUploadService fileUploadService, SubmissionRepository submissionRepository) {
+    public FileUploadController(FileUploadService fileUploadService, SubmissionRepository submissionRepository, ExecutionQueueService executionQueueService) {
         this.fileUploadService = fileUploadService;
         this.submissionRepository = submissionRepository;
+        this.executionQueueService = executionQueueService;
     }
 
 
@@ -53,10 +56,6 @@ public class FileUploadController {
             String filePath = fileUploadService.saveFile(file);
             logger.info("File upload success - File name: " + file.getOriginalFilename() + ", File path: " + filePath);
 
-            String logs = new FileExecutionService().runScript(file.getOriginalFilename());
-            logger.info("File execution success - File name: " + file.getOriginalFilename());
-            logger.info("Logs:\n" + logs);
-
             Submissions submission = new Submissions();
             submission.setUserId(userID);
             submission.setFileName(file.getOriginalFilename());
@@ -64,7 +63,9 @@ public class FileUploadController {
             submission.setStatus("Pending");
             submissionRepository.save(submission);
 
-            return new ResponseEntity<>("File uploaded successfully.\nExecuting file.\nFile name: " + file.getOriginalFilename(), HttpStatus.OK);
+            executionQueueService.addSubmission(submission);
+
+            return new ResponseEntity<>("File uploaded successfully.\nSubmission queued for execution.\nFile name: " + file.getOriginalFilename(), HttpStatus.OK);
         } catch (IOException e) {
             logger.severe("Failed to upload the file: " + e.getMessage());
             return new ResponseEntity<>("Failed to upload the file, please try again.", HttpStatus.INTERNAL_SERVER_ERROR);

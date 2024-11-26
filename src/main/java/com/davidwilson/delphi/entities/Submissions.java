@@ -18,6 +18,7 @@ public class Submissions {
     @Column(name="file_name")
     private String fileName;
 
+    @Column(length = 10000)
     private String output;
     
     private String timestamp;
