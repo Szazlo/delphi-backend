@@ -30,12 +30,13 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/api/auth/login", "/api/submissions/**") // Disable CSRF for login endpoint only
+                        .ignoringRequestMatchers("/api/auth/login", "/api/auth/register", "/api/submissions/**") // Disable CSRF for login endpoint only
                 )
                 .authorizeHttpRequests(authorizeRequests ->
                         authorizeRequests
                                 .requestMatchers("/api1/**").permitAll() // Allow public access to these endpoints
-                                .requestMatchers("/api/auth/login").permitAll() // Allow public access to these endpoints
+                                .requestMatchers("/api/auth/login").permitAll()
+                                .requestMatchers("/api/auth/register").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2

@@ -20,6 +20,9 @@ public class SecurityController {
     private String clientSecret;
     @Value("${spring.security.oauth2.client.provider.keycloak.token-uri}")
     private String tokenUri;
+    @Value("${keycloak.registerUri}")
+    private String registerUri;
+    private String clientToken;
 
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public ResponseEntity<String> login(@RequestParam Map<String, String> loginRequest) {
@@ -47,5 +50,61 @@ public class SecurityController {
         } else {
             return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
         }
+    }
+    
+    @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> register(@RequestBody Map<String, Object> registerRequest) {
+        RestTemplate restTemplate = new RestTemplate();
+        String accessToken = getCurrentAccessToken();
+
+        // Forward the register request to Keycloak
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(accessToken);
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(registerRequest, headers);
+        ResponseEntity<String> response = restTemplate.postForEntity(registerUri, request, String.class);
+
+        if (response.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+            // Obtain a new bearer token
+            accessToken = obtainNewAccessToken();
+            headers.setBearerAuth(accessToken);
+            request = new HttpEntity<>(registerRequest, headers);
+            response = restTemplate.postForEntity(registerUri, request, String.class);
+        }
+
+        if (response.getStatusCode() == HttpStatus.OK) {
+            return ResponseEntity.ok(response.getBody());
+        } else {
+            return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
+        }
+    }
+
+    private String getCurrentAccessToken() {
+        if (clientToken == null) {
+            return obtainNewAccessToken();
+        }
+        return clientToken;
+    }
+
+    private String obtainNewAccessToken() {
+        RestTemplate restTemplate = new RestTemplate();
+
+        HttpHeaders tokenHeaders = new HttpHeaders();
+        tokenHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        MultiValueMap<String, String> tokenBody = new LinkedMultiValueMap<>();
+        tokenBody.add("client_id", clientId);
+        tokenBody.add("client_secret", clientSecret);
+        tokenBody.add("grant_type", "client_credentials");
+
+        HttpEntity<MultiValueMap<String, String>> tokenRequest = new HttpEntity<>(tokenBody, tokenHeaders);
+        ResponseEntity<Map> tokenResponse = restTemplate.postForEntity(tokenUri, tokenRequest, Map.class);
+
+        if (tokenResponse.getStatusCode() != HttpStatus.OK) {
+            throw new RuntimeException("Failed to obtain access token");
+        }
+        clientToken = (String) tokenResponse.getBody().get("access_token");
+        return clientToken;
     }
 }
