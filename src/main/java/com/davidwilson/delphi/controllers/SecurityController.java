@@ -51,7 +51,7 @@ public class SecurityController {
             return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
         }
     }
-    
+
     @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> register(@RequestBody Map<String, Object> registerRequest) {
         RestTemplate restTemplate = new RestTemplate();
@@ -75,6 +75,9 @@ public class SecurityController {
 
         if (response.getStatusCode() == HttpStatus.OK) {
             return ResponseEntity.ok(response.getBody());
+        }
+        else if (response.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response.getBody());
         } else {
             return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
         }

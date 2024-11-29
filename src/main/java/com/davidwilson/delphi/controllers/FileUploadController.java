@@ -5,6 +5,7 @@ import com.davidwilson.delphi.services.ExecutionQueueService;
 import com.davidwilson.delphi.services.FileUploadService;
 import com.davidwilson.delphi.services.FileExecutionService;
 
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,8 +13,11 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.logging.Logger;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/files")
@@ -21,28 +25,33 @@ public class FileUploadController {
 
     private static final String ZIP_MIME_TYPE = "application/zip";
     private static final String ZIP_EXTENSION = ".zip";
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(FileUploadController.class);
 
 
     private final FileUploadService fileUploadService;
     private final SubmissionRepository submissionRepository;
     private final ExecutionQueueService executionQueueService;
+    private final SubmissionController submissionController;
     Logger logger = Logger.getLogger(FileUploadController.class.getName());
 
-    public FileUploadController(FileUploadService fileUploadService, SubmissionRepository submissionRepository, ExecutionQueueService executionQueueService) {
+    public FileUploadController(FileUploadService fileUploadService, SubmissionRepository submissionRepository, ExecutionQueueService executionQueueService, SubmissionController submissionController) {
         this.fileUploadService = fileUploadService;
         this.submissionRepository = submissionRepository;
         this.executionQueueService = executionQueueService;
+        this.submissionController = submissionController;
     }
 
 
 
     @PostMapping("/upload")
-    public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file, @RequestHeader("Authorization") String token) {
+    public ResponseEntity<Map<String, Object>> uploadFile(@RequestParam("file") MultipartFile file, @RequestHeader("Authorization") String token) {
+        Map<String, Object> response = new HashMap<>();
         try {
             // limit file types
             if (!Objects.requireNonNull(file.getOriginalFilename()).endsWith(ZIP_EXTENSION) ||
                     !ZIP_MIME_TYPE.equals(file.getContentType())) {
-                return new ResponseEntity<>("Bad file type. Formats accepted: .zip", HttpStatus.BAD_REQUEST);
+                response.put("message", "Bad file type. Formats accepted: .zip");
+                return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
             }
             //TODO: Check for files with same hash (duplicate files)
             //TODO: Associate files with user
@@ -50,7 +59,8 @@ public class FileUploadController {
             //TODO: Auto cleanup files after a certain time
             String userID = extractUserID(token);
             if (userID.isEmpty()) {
-                return new ResponseEntity<>("User not found", HttpStatus.BAD_REQUEST);
+                response.put("message", "User not found");
+                return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
             }
 
             String filePath = fileUploadService.saveFile(file);
@@ -64,11 +74,14 @@ public class FileUploadController {
             submissionRepository.save(submission);
 
             executionQueueService.addSubmission(submission);
-
-            return new ResponseEntity<>("File uploaded successfully.\nSubmission queued for execution.\nFile name: " + file.getOriginalFilename(), HttpStatus.OK);
+            UUID submissionId = submission.getId();
+            response.put("message", "File uploaded successfully. Submission queued for execution.");
+            response.put("submissionId", submissionId);
+            return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (IOException e) {
             logger.severe("Failed to upload the file: " + e.getMessage());
-            return new ResponseEntity<>("Failed to upload the file, please try again.", HttpStatus.INTERNAL_SERVER_ERROR);
+            response.put("message", "Failed to upload the file, please try again.");
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     // Handle MaxUploadSizeExceededException

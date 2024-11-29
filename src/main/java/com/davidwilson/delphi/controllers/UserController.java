@@ -21,14 +21,20 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable Long id) {
+    public ResponseEntity<User> getUserById(@PathVariable String id) {
         return userService.getUserById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping
-    public User createUser(@RequestBody User user) {
-        return userService.createUser(user);
+    @GetMapping("/username/{username}")
+    public ResponseEntity<Boolean> isUsernameTaken(@PathVariable String username) {
+        System.out.println(userService.getUserByUsername(username));
+        return ResponseEntity.ok(userService.getUserByUsername(username).isPresent());
+    }
+
+    @GetMapping("/email/{email}")
+    public ResponseEntity<Boolean> isEmailTaken(@PathVariable String email) {
+        return ResponseEntity.ok(userService.getUserByEmail(email).isPresent());
     }
 }
