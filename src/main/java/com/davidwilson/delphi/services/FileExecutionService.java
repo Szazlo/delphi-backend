@@ -28,9 +28,17 @@ public class FileExecutionService {
             // Extract lint and execution output
             int lintingIndex = scriptOutput.indexOf("LINTING");
             int executionIndex = scriptOutput.indexOf("EXECUTION");
+            int metricsIndex = scriptOutput.indexOf("METRICS");
             String lintingOutput = scriptOutput.substring(lintingIndex + 7, executionIndex);
-            String executionOutput = scriptOutput.substring(executionIndex + 10);
+            String executionOutput = scriptOutput.substring(executionIndex + 10, metricsIndex);
+            // extract metrics values from ("METRICS \n {{\\"runtime\\": $runtime, \\"memory_usage\\": $memory_usage}}"')
+            String metricsOutput = scriptOutput.substring(metricsIndex + 8);
+            String[] metrics = metricsOutput.split(",");
+            int runtime = Integer.parseInt(metrics[0].split(":")[1].trim());
+            int memoryUsage = Integer.parseInt(metrics[1].split(":")[1].trim());
 
+            submission.setRuntime(runtime);
+            submission.setMemoryUsage(memoryUsage);
             submission.setOutput(executionOutput);
             submission.setLintOutput(lintingOutput);
 

@@ -2,8 +2,8 @@
 FROM python:3.13-slim
 
 # Install unzip
-RUN apt-get update && apt-get install -y unzip
-RUN pip install pylint
+RUN apt-get update && apt-get install -y unzip procps
+RUN pip install pylint psutil
 
 # Set the working directory
 WORKDIR /usr/src/app

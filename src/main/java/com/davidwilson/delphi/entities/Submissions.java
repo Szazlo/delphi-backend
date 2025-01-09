@@ -26,7 +26,13 @@ public class Submissions {
 
     @Column(length = 10000)
     private String ai_output;
-    
+
+    @Column(name="runtime")
+    private Integer runtime; // in ms
+
+    @Column(name="memory")
+    private Integer memory; // in KB
+
     private String timestamp;
 
     private String status;
@@ -77,6 +83,22 @@ public class Submissions {
 
     public void setAIOutput(String ai_output) {
         this.ai_output = ai_output;
+    }
+
+    public Integer getRuntime() {
+        return runtime;
+    }
+
+    public void setRuntime(Integer runtime) {
+        this.runtime = runtime;
+    }
+
+    public Integer getMemory() {
+        return memory;
+    }
+
+    public void setMemoryUsage(Integer memory) {
+        this.memory = memory;
     }
 
     public String getTimestamp() {

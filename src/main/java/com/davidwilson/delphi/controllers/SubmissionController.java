@@ -24,6 +24,8 @@ public class SubmissionController {
         if (submissions.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
+        //sort by time
+        submissions.sort((o1, o2) -> o2.getTimestamp().compareTo(o1.getTimestamp()));
         return new ResponseEntity<>(submissions, HttpStatus.OK);
     }
 

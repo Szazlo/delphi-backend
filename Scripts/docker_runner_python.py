@@ -5,6 +5,7 @@ import sys
 import docker
 from docker.errors import ImageNotFound, ContainerError
 import io
+import json
 
 # Constants
 IMAGE_NAME = "python-runner"
@@ -23,8 +24,8 @@ def build_image(client):
         print("Building Docker image...")
         dockerfile_content = f"""
         FROM python:3.13-slim
-        RUN apt-get update && apt-get install -y unzip
-        RUN pip install pylint
+        RUN apt-get update && apt-get install -y unzip procps
+        RUN pip install pylint psutil
         WORKDIR {CONTAINER_DIR}
         CMD ["python", "{PYTHON_SCRIPT}"]
         """
@@ -36,7 +37,6 @@ def run_container(client, zip_file_name):
         print("Error: No zip file specified.")
         sys.exit(1)
 
-    # Unzip archive and run Python script and pylint
     container_volumes = {HOST_DIR: {"bind": CONTAINER_DIR, "mode": "rw"}}
     command = f"""
     sh -c 'mkdir -p {TEMP_DIR} && \
@@ -44,7 +44,12 @@ def run_container(client, zip_file_name):
            echo "LINTING" && \
            pylint {TEMP_DIR}/*.py || true && \
            echo "EXECUTION" && \
-           python {TEMP_DIR}/{PYTHON_SCRIPT} 2>&1; exit $?'
+           start_time=$(date +%s%3N) && \
+           python {TEMP_DIR}/{PYTHON_SCRIPT} 2>&1 && \
+           end_time=$(date +%s%3N) && \
+           runtime=$((end_time - start_time)) && \
+           memory_usage=$(ps -o rss= -p $$) && \
+           echo "METRICS \n "runtime":$runtime, "memory_usage":$memory_usage"'
     """  # Redirect both stdout and stderr
 
     try:
