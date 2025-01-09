@@ -24,6 +24,7 @@ def build_image(client):
         dockerfile_content = f"""
         FROM python:3.13-slim
         RUN apt-get update && apt-get install -y unzip
+        RUN pip install pylint
         WORKDIR {CONTAINER_DIR}
         CMD ["python", "{PYTHON_SCRIPT}"]
         """
@@ -35,11 +36,14 @@ def run_container(client, zip_file_name):
         print("Error: No zip file specified.")
         sys.exit(1)
 
-    # Unzip archive and run Python script
+    # Unzip archive and run Python script and pylint
     container_volumes = {HOST_DIR: {"bind": CONTAINER_DIR, "mode": "rw"}}
     command = f"""
     sh -c 'mkdir -p {TEMP_DIR} && \
            unzip -q {CONTAINER_DIR}/{zip_file_name} -d {TEMP_DIR} && \
+           echo "LINTING" && \
+           pylint {TEMP_DIR}/*.py || true && \
+           echo "EXECUTION" && \
            python {TEMP_DIR}/{PYTHON_SCRIPT} 2>&1; exit $?'
     """  # Redirect both stdout and stderr
 
@@ -71,6 +75,7 @@ def run_container(client, zip_file_name):
         error_message = f"Error: Docker container execution failed.\n{e}"
         print(error_message)
         return error_message, 1
+
 def main():
     if len(sys.argv) < 2:
         print("Error: No zip file specified.")

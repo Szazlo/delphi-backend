@@ -20,6 +20,12 @@ public class Submissions {
 
     @Column(length = 10000)
     private String output;
+
+    @Column(length = 10000)
+    private String lint_output;
+
+    @Column(length = 10000)
+    private String ai_output;
     
     private String timestamp;
 
@@ -55,6 +61,22 @@ public class Submissions {
 
     public void setOutput(String output) {
         this.output = output;
+    }
+
+    public String getLintOutput() {
+        return lint_output;
+    }
+
+    public void setLintOutput(String lint_output) {
+        this.lint_output = lint_output;
+    }
+
+    public String getAIOutput() {
+        return ai_output;
+    }
+
+    public void setAIOutput(String ai_output) {
+        this.ai_output = ai_output;
     }
 
     public String getTimestamp() {
