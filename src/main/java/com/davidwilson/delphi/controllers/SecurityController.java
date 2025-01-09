@@ -110,4 +110,33 @@ public class SecurityController {
         clientToken = (String) tokenResponse.getBody().get("access_token");
         return clientToken;
     }
+
+    @PutMapping("/update/{id}")
+    public ResponseEntity<String> updateUser(@PathVariable String id, @RequestBody Map<String, Object> updateRequest) {
+        RestTemplate restTemplate = new RestTemplate();
+        String accessToken = getCurrentAccessToken();
+
+        // Forward the update request to Keycloak
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(accessToken);
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(updateRequest, headers);
+        String updateUri = registerUri + "/" + id;
+        ResponseEntity<String> response = restTemplate.exchange(updateUri, HttpMethod.PUT, request, String.class);
+
+        if (response.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+            // Obtain a new bearer token
+            accessToken = obtainNewAccessToken();
+            headers.setBearerAuth(accessToken);
+            request = new HttpEntity<>(updateRequest, headers);
+            response = restTemplate.exchange(updateUri, HttpMethod.PUT, request, String.class);
+        }
+
+        if (response.getStatusCode() == HttpStatus.OK) {
+            return ResponseEntity.ok(response.getBody());
+        } else {
+            return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
+        }
+    }
 }
