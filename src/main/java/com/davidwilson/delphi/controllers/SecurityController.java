@@ -24,6 +24,33 @@ public class SecurityController {
     private String registerUri;
     private String clientToken;
 
+    @GetMapping("/getUsers")
+    public ResponseEntity<String> getUsers() {
+        RestTemplate restTemplate = new RestTemplate();
+        String accessToken = getCurrentAccessToken();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(accessToken);
+
+        HttpEntity<String> request = new HttpEntity<>(headers);
+        ResponseEntity<String> response = restTemplate.exchange(registerUri, HttpMethod.GET, request, String.class);
+
+        if (response.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+            // Obtain a new bearer token
+            accessToken = obtainNewAccessToken();
+            headers.setBearerAuth(accessToken);
+            request = new HttpEntity<>(headers);
+            response = restTemplate.exchange(registerUri, HttpMethod.GET, request, String.class);
+        }
+
+        if (response.getStatusCode() == HttpStatus.OK) {
+            return ResponseEntity.ok(response.getBody());
+        } else {
+            return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
+        }
+    }
+
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public ResponseEntity<String> login(@RequestParam Map<String, String> loginRequest) {
         String username = loginRequest.get("username");
