@@ -14,22 +14,4 @@ public class UserService {
 
     @Autowired
     private UserRepository userRepository;
-
-
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
-    }
-
-
-    public Optional<User> getUserById(String id) {
-        return userRepository.findById(id);
-    }
-
-    public Optional<User> getUserByUsername(String username) {
-        return userRepository.findAll().stream().filter(user -> user.getUsername().equals(username)).findFirst();
-    }
-
-    public Optional<User> getUserByEmail(String email) {
-        return userRepository.findByEmail(email);
-    }
 }

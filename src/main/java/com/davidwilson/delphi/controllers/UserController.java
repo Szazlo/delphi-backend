@@ -2,39 +2,50 @@ package com.davidwilson.delphi.controllers;
 
 import com.davidwilson.delphi.entities.User;
 import com.davidwilson.delphi.services.UserService;
+import com.davidwilson.delphi.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
 
     @Autowired
-    private UserService userService;
+    private UserRepository userRepository;
 
-    @GetMapping
-    public List<User> getAllUsers() {
-        return userService.getAllUsers();
+    // DTO for handling profile picture updates
+    public static class ProfilePictureRequest {
+        private String pfp;
+
+        public String getPfp() {
+            return pfp;
+        }
+
+        public void setPfp(String pfp) {
+            this.pfp = pfp;
+        }
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable String id) {
-        return userService.getUserById(id)
+    @GetMapping("/pfp/{userId}")
+    public ResponseEntity<String> getProfilePicture(@PathVariable String userId) {
+        return userRepository.findByUserId(userId)
+                .map(User::getPfp)
                 .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/username/{username}")
-    public ResponseEntity<Boolean> isUsernameTaken(@PathVariable String username) {
-        System.out.println(userService.getUserByUsername(username));
-        return ResponseEntity.ok(userService.getUserByUsername(username).isPresent());
-    }
+    @PostMapping("/pfp/{userId}")
+    public ResponseEntity<String> setProfilePicture(@PathVariable String userId, @RequestBody ProfilePictureRequest request) {
+        Optional<User> existingUser = userRepository.findByUserId(userId);
 
-    @GetMapping("/email/{email}")
-    public ResponseEntity<Boolean> isEmailTaken(@PathVariable String email) {
-        return ResponseEntity.ok(userService.getUserByEmail(email).isPresent());
+        User user = existingUser.orElse(new User());
+        user.setUserId(userId);
+        user.setPfp(request.getPfp());
+
+        userRepository.save(user);
+        return ResponseEntity.ok(request.getPfp());
     }
 }

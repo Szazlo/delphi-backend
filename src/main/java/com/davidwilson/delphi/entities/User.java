@@ -3,61 +3,40 @@ package com.davidwilson.delphi.entities;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "user_entity", schema = "public", catalog = "keycloakdb")
+@Table(name = "users", schema = "public", catalog = "delphi_dev")
 public class User {
-    private String id;
-    private String email;
-    private String first_name;
-    private String last_name;
-    private String username;
+    private Integer id;
+    private String user_id;
+    private String pfp;
 
     @Id
-    @Column(name = "id", nullable = false, length = -1)
-    public String getId() {
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    public Integer getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 
     @Basic
-    @Column(name = "email", nullable = true, length = -1)
-    public String getEmail() {
-        return email;
+    @Column(name = "user_id")
+    public String getUserId() {
+        return user_id;
     }
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    @Basic
-    @Column(name = "first_name", nullable = true, length = -1)
-    public String getFirst_name() {
-        return first_name;
-    }
-
-    public void setFirst_name(String first_name) {
-        this.first_name = first_name;
+    public void setUserId(String userId) {
+        this.user_id = userId;
     }
 
     @Basic
-    @Column(name = "last_name", nullable = true, length = -1)
-    public String getLast_name() {
-        return last_name;
+    @Column(name = "pfp")
+    public String getPfp() {
+        return pfp;
     }
 
-    public void setLast_name(String last_name) {
-        this.last_name = last_name;
-    }
-
-    @Basic
-    @Column(name = "username", nullable = true, length = -1)
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
+    public void setPfp(String pfp) {
+        this.pfp = pfp;
     }
 }
