@@ -2,6 +2,8 @@ package com.davidwilson.delphi.controllers;
 
 import com.davidwilson.delphi.entities.Submissions;
 import com.davidwilson.delphi.repositories.SubmissionRepository;
+import com.davidwilson.delphi.entities.SubmissionReviews;
+import com.davidwilson.delphi.repositories.SubmissionReviewsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -19,6 +21,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.logging.Logger;
 
 @RestController
 @RequestMapping("/api/submissions")
@@ -28,6 +31,11 @@ public class SubmissionController {
 
     @Autowired
     private SubmissionRepository submissionRepository;
+
+    @Autowired
+    private SubmissionReviewsRepository submissionReviewsRepository;
+
+    private static Logger logger = Logger.getLogger(SubmissionController.class.getName());
 
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<Submissions>> getSubmissionsForUser(@PathVariable String userId) {
@@ -74,6 +82,30 @@ public class SubmissionController {
             e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @GetMapping("/reviewer/{id}")
+    public ResponseEntity<List<SubmissionReviews>> getSubmissionsForReviewer(@PathVariable String id) {
+        List<SubmissionReviews> submissionReviews = submissionReviewsRepository.findBySubmissionId(id);
+        if (submissionReviews.isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        }
+        return new ResponseEntity<>(submissionReviews, HttpStatus.OK);
+    }
+
+    @PostMapping("/{id}/addreviewer")
+    public ResponseEntity<String> assignSubmissionReviewer(@RequestParam String reviewerId , @PathVariable String id) {
+        if (submissionReviewsRepository.existsBySubmissionId(id)) {
+            return new ResponseEntity<>("Reviewer already assigned", HttpStatus.BAD_REQUEST);
+        }
+        SubmissionReviews submissionReviews = new SubmissionReviews();
+        submissionReviews.setSubmissionId(id);
+        submissionReviews.setReviewerId(reviewerId);
+        submissionReviews.setStatus("Pending");
+        submissionReviews.setCreatedAt(String.valueOf(System.currentTimeMillis()));
+        logger.info("Assigning reviewer " + reviewerId + " to submission " + id);
+        submissionReviewsRepository.save(submissionReviews);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
 }

@@ -1,0 +1,73 @@
+package com.davidwilson.delphi.controllers;
+
+import com.davidwilson.delphi.entities.Group;
+import com.davidwilson.delphi.entities.UserGroup;
+import com.davidwilson.delphi.repositories.GroupRepository;
+import com.davidwilson.delphi.repositories.UserGroupRepository;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/groups")
+public class GroupController {
+
+    private final GroupRepository groupRepository;
+    private final UserGroupRepository userGroupRepository;
+
+    public GroupController(GroupRepository groupRepository, UserGroupRepository userGroupRepository) {
+        this.groupRepository = groupRepository;
+        this.userGroupRepository = userGroupRepository;
+    }
+
+    @PostMapping
+    public ResponseEntity<Group> createGroup(@RequestBody Group group) {
+        return ResponseEntity.ok(groupRepository.save(group));
+    }
+
+    @GetMapping
+    public List<Group> getAllGroups() {
+        return groupRepository.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Group> getGroupById(@PathVariable UUID id) {
+        return groupRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{groupId}/users")
+    public ResponseEntity<UserGroup> addUserToGroup(@PathVariable UUID groupId, @RequestParam String userId, @RequestParam(defaultValue = "member") String role) {
+        Optional<Group> group = groupRepository.findById(groupId);
+        if (group.isPresent()) {
+            UserGroup userGroup = new UserGroup();
+            userGroup.setUserId(userId);
+            userGroup.setGroup(group.get());
+            userGroup.setRole(role);
+            return ResponseEntity.ok(userGroupRepository.save(userGroup));
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/{groupId}/users")
+    public List<UserGroup> getUsersInGroup(@PathVariable UUID groupId) {
+        return userGroupRepository.findByGroupId(groupId);
+    }
+
+    @DeleteMapping("/{groupId}/users/{userId}")
+    public ResponseEntity<Void> removeUserFromGroup(@PathVariable UUID groupId, @PathVariable String userId) {
+        List<UserGroup> memberships = userGroupRepository.findByUserId(userId);
+        for (UserGroup membership : memberships) {
+            if (membership.getGroup().getId().equals(groupId)) {
+                userGroupRepository.delete(membership);
+                return ResponseEntity.ok().build();
+            }
+        }
+        return ResponseEntity.notFound().build();
+    }
+}
