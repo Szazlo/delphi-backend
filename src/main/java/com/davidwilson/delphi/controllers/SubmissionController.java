@@ -107,5 +107,4 @@ public class SubmissionController {
         submissionReviewsRepository.save(submissionReviews);
         return new ResponseEntity<>(HttpStatus.OK);
     }
-
 }
