@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/groups")
@@ -69,5 +70,13 @@ public class GroupController {
             }
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/{userId}/groups")
+    public List<Group> getGroupsForUser(@PathVariable String userId) {
+        List<UserGroup> userGroups = userGroupRepository.findByUserId(userId);
+        return userGroups.stream()
+                .map(UserGroup::getGroup)
+                .collect(Collectors.toList());
     }
 }

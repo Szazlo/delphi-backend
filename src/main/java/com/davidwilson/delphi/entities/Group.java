@@ -21,6 +21,9 @@ public class Group {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(name="coverimg", nullable = false)
+    private String coverImg = null;
+
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
 
@@ -32,4 +35,7 @@ public class Group {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public String getCoverImg() { return coverImg; }
+    public void setCoverImg(String coverImg) { this.coverImg = coverImg; }
 }

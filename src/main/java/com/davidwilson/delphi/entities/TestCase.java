@@ -24,7 +24,6 @@ public class TestCase {
 
     private Timestamp createdAt;
 
-    // Getters and Setters
     public UUID getId() {
         return id;
     }
