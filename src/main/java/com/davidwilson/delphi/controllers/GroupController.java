@@ -35,11 +35,31 @@ public class GroupController {
         return groupRepository.findAll();
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteGroup(@PathVariable UUID id) {
+        Optional<Group> group = groupRepository.findById(id);
+        if (group.isPresent()) {
+            groupRepository.delete(group.get());
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Group> getGroupById(@PathVariable UUID id) {
         return groupRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Group> updateGroup(@PathVariable UUID id, @RequestBody Group group) {
+        Optional<Group> existingGroup = groupRepository.findById(id);
+        if (existingGroup.isPresent()) {
+            group.setId(id);
+            return ResponseEntity.ok(groupRepository.save(group));
+        }
+        return ResponseEntity.notFound().build();
     }
 
     @PostMapping("/{groupId}/users")
@@ -74,9 +94,15 @@ public class GroupController {
 
     @GetMapping("/{userId}/groups")
     public List<Group> getGroupsForUser(@PathVariable String userId) {
-        List<UserGroup> userGroups = userGroupRepository.findByUserId(userId);
-        return userGroups.stream()
+        List<UserGroup> userGroups = userGroupRepository.findByUserId(String.valueOf(UUID.fromString(userId)));
+        List<Group> memberGroups = userGroups.stream()
                 .map(UserGroup::getGroup)
                 .collect(Collectors.toList());
+
+        List<Group> ownerGroups = groupRepository.findByOwner(userId);
+
+        memberGroups.addAll(ownerGroups);
+        return memberGroups;
     }
+
 }

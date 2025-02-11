@@ -19,16 +19,14 @@ public class Assignment {
     @JoinColumn(name = "group_id", nullable = false)
     private Group group;
 
-    private Timestamp dueDate;
+    private Timestamp dueDate;  // No need to specify nullable, it's the default
 
-    @Column(nullable = false)
-    private Timestamp createdAt;
+    private Timestamp createdAt = new Timestamp(System.currentTimeMillis());
 
-    private Float timeLimit = 2.0f;  // Added default time limit
-    private Integer memoryLimit = 256;  // Added default memory limit
-    private Integer maxScore = 100;    // Added default max score
+    private Float timeLimit = 2.0f;
+    private Integer memoryLimit = 256;
+    private Integer maxScore = 100;
 
-    // Getters and Setters
     public UUID getId() {
         return id;
     }
