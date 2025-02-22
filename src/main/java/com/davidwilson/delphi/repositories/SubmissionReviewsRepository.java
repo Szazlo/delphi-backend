@@ -8,4 +8,6 @@ import java.util.List;
 public interface SubmissionReviewsRepository extends JpaRepository<SubmissionReviews, String> {
     List<SubmissionReviews> findBySubmissionId(String id);
     boolean existsBySubmissionId(String id);
+
+    List<SubmissionReviews> findByReviewerId(String reviewerId);
 }

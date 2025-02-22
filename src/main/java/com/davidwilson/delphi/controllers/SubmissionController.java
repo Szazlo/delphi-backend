@@ -18,6 +18,7 @@ import org.springframework.core.io.UrlResource;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,12 +39,19 @@ public class SubmissionController {
     private static Logger logger = Logger.getLogger(SubmissionController.class.getName());
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Submissions>> getSubmissionsForUser(@PathVariable String userId) {
+    public ResponseEntity<List<Submissions>> getSubmissionsForUser(
+            @PathVariable String userId,
+            @RequestParam(required = false) Boolean withReviewRequest) {
         List<Submissions> submissions = submissionRepository.findByUserId(userId);
         if (submissions.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
-        //sort by time
+
+        if (Boolean.TRUE.equals(withReviewRequest)) {
+            submissions.removeIf(submission -> !submissionReviewsRepository.existsBySubmissionId(submission.getId().toString()));
+        }
+
+        // Sort by time
         submissions.sort((o1, o2) -> o2.getTimestamp().compareTo(o1.getTimestamp()));
         return new ResponseEntity<>(submissions, HttpStatus.OK);
     }
@@ -85,12 +93,15 @@ public class SubmissionController {
     }
 
     @GetMapping("/reviewer/{id}")
-    public ResponseEntity<List<SubmissionReviews>> getSubmissionsForReviewer(@PathVariable String id) {
-        List<SubmissionReviews> submissionReviews = submissionReviewsRepository.findBySubmissionId(id);
-        if (submissionReviews.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    public ResponseEntity<List<Submissions>> getSubmissionsForReviewer(@PathVariable String id) {
+        List<SubmissionReviews> submissionReviews = submissionReviewsRepository.findByReviewerId(id);
+        List<Submissions> submissions = new ArrayList<>();
+        for (SubmissionReviews review : submissionReviews) {
+            Optional<Submissions> submission = submissionRepository.findById(UUID.fromString(review.getSubmissionId()));
+            submission.ifPresent(submissions::add);
         }
-        return new ResponseEntity<>(submissionReviews, HttpStatus.OK);
+
+        return new ResponseEntity<>(submissions, HttpStatus.OK);
     }
 
     @PostMapping("/{id}/addreviewer")

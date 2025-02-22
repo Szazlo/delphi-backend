@@ -37,6 +37,10 @@ public class Submissions {
 
     private String status;
 
+    @ManyToOne
+    @JoinColumn(name = "assignment_id", nullable = false)
+    private Assignment assignment;
+
     public UUID getId() {
         return id;
     }
@@ -116,4 +120,8 @@ public class Submissions {
     public void setStatus(String status) {
         this.status = status;
     }
+
+    public Assignment getAssignment() { return assignment; }
+
+    public void setAssignment(Assignment assignment) { this.assignment = assignment; }
 }

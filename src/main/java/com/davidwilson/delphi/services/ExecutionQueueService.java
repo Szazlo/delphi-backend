@@ -1,13 +1,13 @@
 package com.davidwilson.delphi.services;
 
 import com.davidwilson.delphi.entities.Submissions;
+import com.davidwilson.delphi.repositories.AssignmentRepository;
 import com.davidwilson.delphi.repositories.SubmissionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.*;
 
 @Service
 public class ExecutionQueueService {
@@ -15,20 +15,28 @@ public class ExecutionQueueService {
     private final BlockingQueue<Submissions> submissionQueue = new LinkedBlockingQueue<>();
     private final SubmissionRepository submissionRepository;
     private final FileExecutionService fileExecutionService;
+    private final AssignmentRepository assignmentRepository;
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     @Autowired
-    public ExecutionQueueService(SubmissionRepository submissionRepository, FileExecutionService fileExecutionService) {
+    public ExecutionQueueService(SubmissionRepository submissionRepository,
+                                 FileExecutionService fileExecutionService,
+                                 AssignmentRepository assignmentRepository) {
         this.submissionRepository = submissionRepository;
         this.fileExecutionService = fileExecutionService;
+        this.assignmentRepository = assignmentRepository;
     }
 
     public void addSubmission(Submissions submission) {
-        submissionQueue.add(submission);
+        boolean added = submissionQueue.offer(submission);
+        if (!added) {
+            throw new RuntimeException("Queue is full. Submission could not be added.");
+        }
     }
 
     @PostConstruct
     public void startProcessing() {
-        Thread processorThread = new Thread(new SubmissionProcessor(submissionQueue, fileExecutionService, submissionRepository));
-        processorThread.start();
+        executorService.submit(new SubmissionProcessor(submissionQueue, fileExecutionService,
+                submissionRepository, assignmentRepository));
     }
 }

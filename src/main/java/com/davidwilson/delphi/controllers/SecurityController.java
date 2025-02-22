@@ -205,6 +205,34 @@ public class SecurityController {
         }
     }
 
+    @GetMapping("/name/{id}")
+    public ResponseEntity<String> getUserName(@PathVariable String id) {
+        RestTemplate restTemplate = new RestTemplate();
+        String accessToken = getCurrentAccessToken();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(accessToken);
+
+        HttpEntity<String> request = new HttpEntity<>(headers);
+        String userURI = registerUri + "/" + id;
+        ResponseEntity<String> response = restTemplate.exchange(userURI, HttpMethod.GET, request, String.class);
+
+        if (response.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+            // Obtain a new bearer token
+            accessToken = obtainNewAccessToken();
+            headers.setBearerAuth(accessToken);
+            request = new HttpEntity<>(headers);
+            response = restTemplate.exchange(userURI, HttpMethod.GET, request, String.class);
+        }
+
+        if (response.getStatusCode() == HttpStatus.OK) {
+            return ResponseEntity.ok(response.getBody());
+        } else {
+            return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
+        }
+    }
+
     @GetMapping("/manager/{id}")
     public ResponseEntity<Boolean> isManager(@PathVariable String id) {
         RestTemplate restTemplate = new RestTemplate();

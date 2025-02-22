@@ -1,5 +1,7 @@
 package com.davidwilson.delphi.controllers;
+import com.davidwilson.delphi.entities.Assignment;
 import com.davidwilson.delphi.entities.Submissions;
+import com.davidwilson.delphi.repositories.AssignmentRepository;
 import com.davidwilson.delphi.repositories.SubmissionRepository;
 import com.davidwilson.delphi.services.ExecutionQueueService;
 import com.davidwilson.delphi.services.FileUploadService;
@@ -32,58 +34,70 @@ public class FileUploadController {
     private final SubmissionRepository submissionRepository;
     private final ExecutionQueueService executionQueueService;
     private final SubmissionController submissionController;
+    private final AssignmentRepository assignmentRepository;
     Logger logger = Logger.getLogger(FileUploadController.class.getName());
 
-    public FileUploadController(FileUploadService fileUploadService, SubmissionRepository submissionRepository, ExecutionQueueService executionQueueService, SubmissionController submissionController) {
+    public FileUploadController(FileUploadService fileUploadService, SubmissionRepository submissionRepository, ExecutionQueueService executionQueueService, SubmissionController submissionController, AssignmentRepository assignmentRepository) {
         this.fileUploadService = fileUploadService;
         this.submissionRepository = submissionRepository;
         this.executionQueueService = executionQueueService;
         this.submissionController = submissionController;
+        this.assignmentRepository = assignmentRepository;
     }
 
 
 
     @PostMapping("/upload")
-    public ResponseEntity<Map<String, Object>> uploadFile(@RequestParam("file") MultipartFile file, @RequestHeader("Authorization") String token) {
+    public ResponseEntity<Map<String, Object>> uploadFile(@RequestParam("file") MultipartFile file, @RequestParam String assignmentId, @RequestHeader("Authorization") String token) {
         Map<String, Object> response = new HashMap<>();
         try {
-            // limit file types
+            // Check file type
             if (!Objects.requireNonNull(file.getOriginalFilename()).endsWith(ZIP_EXTENSION) ||
                     !ZIP_MIME_TYPE.equals(file.getContentType())) {
                 response.put("message", "Bad file type. Formats accepted: .zip");
                 return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
             }
-            //TODO: Check for files with same hash (duplicate files)
-            //TODO: Associate files with user
-            //TODO: Compilation and running in container, return results
-            //TODO: Auto cleanup files after a certain time
+
             String userID = extractUserID(token);
             if (userID.isEmpty()) {
                 response.put("message", "User not found");
                 return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
             }
 
-            String filePath = fileUploadService.saveFile(file);
-            logger.info("File upload success - File name: " + file.getOriginalFilename() + ", File path: " + filePath);
+            // Fetch assignment
+            Assignment assignment = assignmentRepository.findById(UUID.fromString(assignmentId))
+                    .orElseThrow(() -> new IllegalArgumentException("Invalid assignment ID"));
 
+            // Save file
+            String filePath = fileUploadService.saveFile(file);
+            log.info("File uploaded successfully: " + file.getOriginalFilename() + ", Path: " + filePath);
+
+            // Create submission and set all necessary fields
             Submissions submission = new Submissions();
             submission.setUserId(userID);
             submission.setFileName(file.getOriginalFilename());
             submission.setTimestamp(String.valueOf(System.currentTimeMillis()));
             submission.setStatus("Pending");
+            submission.setAssignment(assignment);  // ✅ FIX: Setting the assignment entity
             submissionRepository.save(submission);
 
+            // Add submission to execution queue
             executionQueueService.addSubmission(submission);
-            UUID submissionId = submission.getId();
+
             response.put("message", "File uploaded successfully. Submission queued for execution.");
-            response.put("submissionId", submissionId);
+            response.put("submissionId", submission.getId());
             return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            log.error("Assignment not found: " + e.getMessage());
+            response.put("message", "Invalid assignment ID.");
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         } catch (IOException e) {
-            logger.severe("Failed to upload the file: " + e.getMessage());
-            response.put("message", "Failed to upload the file, please try again.");
+            log.error("File upload failed: " + e.getMessage());
+            response.put("message", "Failed to upload the file. Please try again.");
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
     // Handle MaxUploadSizeExceededException
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<String> handleMaxSizeException(MaxUploadSizeExceededException e) {
