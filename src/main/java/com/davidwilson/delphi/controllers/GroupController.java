@@ -13,16 +13,20 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.davidwilson.delphi.services.GroupService;
+
 @RestController
 @RequestMapping("/api/groups")
 public class GroupController {
 
     private final GroupRepository groupRepository;
     private final UserGroupRepository userGroupRepository;
+    private final GroupService groupService;
 
-    public GroupController(GroupRepository groupRepository, UserGroupRepository userGroupRepository) {
+    public GroupController(GroupRepository groupRepository, UserGroupRepository userGroupRepository, GroupService groupService) {
         this.groupRepository = groupRepository;
         this.userGroupRepository = userGroupRepository;
+        this.groupService = groupService;
     }
 
     @PostMapping
@@ -60,6 +64,26 @@ public class GroupController {
             return ResponseEntity.ok(groupRepository.save(group));
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @PutMapping("/{id}/archive")
+    public ResponseEntity<?> archiveGroup(@PathVariable UUID id, @RequestParam String owner) {
+        boolean success = groupService.archiveGroup(id, owner);
+        if (success) {
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PutMapping("/{id}/restore")
+    public ResponseEntity<?> restoreGroup(@PathVariable UUID id, @RequestParam String owner) {
+        boolean success = groupService.restoreGroup(id, owner);
+        if (success) {
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @PostMapping("/{groupId}/users")

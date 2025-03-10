@@ -1,6 +1,8 @@
 package com.davidwilson.delphi.entities;
 
 import jakarta.persistence.*;
+
+import java.time.LocalDateTime;
 import java.util.UUID;
 import java.sql.Timestamp;
 
@@ -15,14 +17,14 @@ public class TestCase {
     @ManyToOne
     @JoinColumn(name = "assignment_id", nullable = false)
     private Assignment assignment;
-
+    @Column(columnDefinition = "TEXT")
     private String input;
+    @Column(columnDefinition = "TEXT")
     private String expectedOutput;
-
-    @Column(nullable = false)
-    private Integer weight = 0;  // Added weight with default value of 0
-
-    private Timestamp createdAt;
+    @Column(columnDefinition = "TEXT")
+    private String description;
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 
     public UUID getId() {
         return id;
@@ -56,19 +58,19 @@ public class TestCase {
         this.expectedOutput = expectedOutput;
     }
 
-    public Integer getWeight() {
-        return weight;
+    public String getDescription() {
+        return description;
     }
 
-    public void setWeight(Integer weight) {
-        this.weight = weight;
+    public void setDescription(String description) {
+        this.description = description;
     }
 
-    public Timestamp getCreatedAt() {
+    public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(Timestamp createdAt) {
+    public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
 }

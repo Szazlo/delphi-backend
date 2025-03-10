@@ -41,6 +41,9 @@ public class Submissions {
     @JoinColumn(name = "assignment_id", nullable = false)
     private Assignment assignment;
 
+    @Column(columnDefinition = "TEXT")
+    private String testResults;
+
     public UUID getId() {
         return id;
     }
@@ -124,4 +127,12 @@ public class Submissions {
     public Assignment getAssignment() { return assignment; }
 
     public void setAssignment(Assignment assignment) { this.assignment = assignment; }
+
+    public String getTestResults() {
+        return testResults;
+    }
+
+    public void setTestResults(String testResults) {
+        this.testResults = testResults;
+    }
 }

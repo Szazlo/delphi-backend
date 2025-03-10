@@ -2,6 +2,7 @@ package com.davidwilson.delphi.entities;
 
 import jakarta.persistence.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -24,6 +25,12 @@ public class Group {
     @Column(name="coverimg", nullable = false)
     private String coverImg = null;
 
+    @Column(nullable = false)
+    private boolean archived = false;
+
+    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Assignment> assignments;
+
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
 
@@ -38,4 +45,7 @@ public class Group {
 
     public String getCoverImg() { return coverImg; }
     public void setCoverImg(String coverImg) { this.coverImg = coverImg; }
+
+    public boolean isArchived() { return archived; }
+    public void setArchived(boolean archived) { this.archived = archived; }
 }

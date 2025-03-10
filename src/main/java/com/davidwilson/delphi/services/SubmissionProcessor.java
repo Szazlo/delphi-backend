@@ -6,8 +6,12 @@ import com.davidwilson.delphi.repositories.AssignmentRepository;
 import com.davidwilson.delphi.repositories.SubmissionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import com.davidwilson.delphi.repositories.TestCaseRepository;
+import com.davidwilson.delphi.entities.TestCase;
+
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
+import java.util.List;
 
 public class SubmissionProcessor implements Runnable {
 
@@ -15,13 +19,15 @@ public class SubmissionProcessor implements Runnable {
     private final FileExecutionService fileExecutionService;
     private final SubmissionRepository submissionRepository;
     private final AssignmentRepository assignmentRepository;
+    private final TestCaseRepository testCaseRepository;
 
     @Autowired
-    public SubmissionProcessor(BlockingQueue<Submissions> submissionQueue, FileExecutionService fileExecutionService, SubmissionRepository submissionRepository, AssignmentRepository assignmentRepository) {
+    public SubmissionProcessor(BlockingQueue<Submissions> submissionQueue, FileExecutionService fileExecutionService, SubmissionRepository submissionRepository, AssignmentRepository assignmentRepository, TestCaseRepository testCaseRepository) {
         this.submissionQueue = submissionQueue;
         this.fileExecutionService = fileExecutionService;
         this.submissionRepository = submissionRepository;
         this.assignmentRepository = assignmentRepository;
+        this.testCaseRepository = testCaseRepository;
     }
 
     @Override
@@ -36,7 +42,9 @@ public class SubmissionProcessor implements Runnable {
                 submission.setAssignment(assignment);
                 submissionRepository.save(submission);
 
-                fileExecutionService.runScriptAsync(submission.getFileName(), submission, submissionRepository);
+                List<TestCase> testCases = testCaseRepository.findByAssignmentId(assignmentId);
+
+                fileExecutionService.runScriptAsync(submission.getFileName(), submission, submissionRepository, testCases);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;

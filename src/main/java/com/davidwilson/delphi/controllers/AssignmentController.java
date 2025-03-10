@@ -35,6 +35,12 @@ public class AssignmentController {
     @Autowired
     private AssignmentService assignmentService;
 
+    @GetMapping("/{id}")
+    public ResponseEntity<Assignment> getAssignment(@PathVariable UUID id) {
+        Optional<Assignment> assignment = assignmentRepository.findById(id);
+        return assignment.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     // Create an assignment for a group
     @PostMapping
     public ResponseEntity<Assignment> createAssignment(@RequestBody Map<String, Object> assignmentData) {
