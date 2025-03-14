@@ -12,12 +12,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
 public class FileExecutionService {
 
-    Logger logger = LoggerFactory.getLogger(FileExecutionService.class);
+    private final Logger logger = LoggerFactory.getLogger(FileExecutionService.class);
     private static final String SCRIPT_PATH = "Scripts/docker_runner_python.py";
+    private final AIAnalysisService aiAnalysisService;
+
+    @Autowired
+    public FileExecutionService(AIAnalysisService aiAnalysisService) {
+        this.aiAnalysisService = aiAnalysisService;
+    }
 
     @Async("submissionExecutor")
     public void runScriptAsync(String zipFileName, Submissions submission, SubmissionRepository submissionRepository, List<TestCase> testCases) {
@@ -30,8 +37,11 @@ public class FileExecutionService {
                 //prepare test cases to pass onto the script
                 StringBuilder sb = new StringBuilder();
                 for (TestCase testCase : testCases) {
-                    // Format: input<space>expectedOutput
-                    sb.append(testCase.getInput()).append(" ").append(testCase.getExpectedOutput()).append("\n");
+                    // Format: input|||expectedOutput<separator>
+                    // Using ||| as delimiter to avoid confusion with spaces in the values
+                    String input = testCase.getInput().replace("\\n", "\n");  // Convert literal \n to newlines
+                    String expected = testCase.getExpectedOutput().replace("\\n", "\n");  // Convert literal \n to newlines
+                    sb.append(input).append("|||").append(expected).append("\n---\n");
                 }
                 testCasesString = sb.toString();
             }
@@ -134,6 +144,12 @@ public class FileExecutionService {
             }
 
             submission.setLintOutput(lintingOutput);
+
+            // After test execution is complete, perform AI analysis
+            String projectPath = HOST_DIR + "/" + TEMP_DIR + "/" + zipFileName.replace(".zip", "");
+            String aiAnalysis = aiAnalysisService.analyzeCode(projectPath);
+            submission.setAiAnalysis(aiAnalysis);
+
             submission.setStatus("Completed");
             submissionRepository.save(submission);
         } catch (IOException | InterruptedException e) {

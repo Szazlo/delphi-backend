@@ -7,6 +7,8 @@ from docker.errors import ImageNotFound, ContainerError
 import io
 import json
 import uuid
+import time
+import subprocess
 
 # Constants
 IMAGE_NAME = "python-runner"
@@ -41,11 +43,140 @@ def run_container(client, zip_file_name, test_cases=None):
     # Extract the base name without .zip extension to use as the script name
     script_base_name = os.path.splitext(zip_file_name)[0]
 
+    # Write test execution script
+    test_runner_code = '''#!/usr/bin/env python3
+import sys
+import json
+import subprocess
+import time
+import os
+
+def run_tests(test_file_path, target_file):
+    # Read test cases file
+    with open(test_file_path, "r") as f:
+        content = f.read()
+        # Split on test case separator
+        test_case_texts = content.split("\\n---\\n")
+        test_cases = []
+        for test_case_text in test_case_texts:
+            test_case_text = test_case_text.strip()
+            if not test_case_text:  # Skip empty test cases
+                continue
+            # Split on ||| to separate input from expected output
+            parts = test_case_text.split("|||")
+            if len(parts) == 2:
+                test_input, expected_output = parts[0].strip(), parts[1].strip()
+                test_cases.append({"input": test_input, "expected": expected_output})
+
+    results = []
+    for test_case in test_cases:
+        try:
+            test_input = test_case["input"]
+            expected_output = test_case["expected"]
+            
+            print(f"Running test with input: {test_input!r}", file=sys.stderr)
+            
+            # Execute the test
+            test_start = time.time() * 1000
+            try:
+                proc = subprocess.Popen(
+                    ["python3", "-u", target_file],  # Add -u for unbuffered output
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    universal_newlines=True,
+                    bufsize=1  # Line buffered
+                )
+                
+                # Send each input line
+                actual_output, errors = proc.communicate(input=test_input + "\\n", timeout=5)
+                test_end = time.time() * 1000
+                
+                print(f"Raw output: {actual_output!r}", file=sys.stderr)
+                if errors:
+                    print(f"Errors: {errors!r}", file=sys.stderr)
+                
+                # Calculate metrics
+                test_runtime = int(test_end - test_start)
+                
+                # Get memory usage
+                memory_usage = 0
+                try:
+                    pid_str = str(proc.pid)
+                    memory_usage = int(os.popen("ps -o rss= -p " + pid_str).read().strip())
+                except Exception as e:
+                    print(f"Error getting memory usage: {str(e)}", file=sys.stderr)
+                
+                # Check if output matches expected
+                actual = actual_output.strip()
+                expected = expected_output.strip()
+                passed = actual == expected
+                
+                print(f"Comparing: actual={actual!r} expected={expected!r} passed={passed}", file=sys.stderr)
+                
+                result = {
+                    "input": test_input,
+                    "expected": expected_output,
+                    "actual": actual,
+                    "status": "Passed" if passed else "Failed",
+                    "memory": memory_usage,
+                    "runtime": test_runtime,
+                    "error": errors.strip() if errors else None
+                }
+                
+                print(f"Result: {result}", file=sys.stderr)
+                results.append(result)
+                
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                results.append({
+                    "input": test_input,
+                    "expected": expected_output,
+                    "actual": "Timeout",
+                    "status": "Failed",
+                    "memory": 0,
+                    "runtime": 5000,
+                    "error": "Execution timed out after 5 seconds"
+                })
+            except Exception as e:
+                print(f"Error during test execution: {str(e)}", file=sys.stderr)
+                results.append({
+                    "input": test_input,
+                    "expected": expected_output,
+                    "actual": "",
+                    "status": "Failed",
+                    "memory": 0,
+                    "runtime": 0,
+                    "error": str(e)
+                })
+
+        except Exception as e:
+            print(f"Error processing test case: {str(e)}", file=sys.stderr)
+            continue
+
+    print(json.dumps(results))
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Usage: test_runner.py <test_file_path> <target_file>")
+        sys.exit(1)
+    
+    test_file_path = sys.argv[1]
+    target_file = sys.argv[2]
+    run_tests(test_file_path, target_file)
+'''
+
+    # Write the test runner script to a file
+    test_runner_path = os.path.join(HOST_DIR, "test_runner.py")
+    with open(test_runner_path, "w") as f:
+        f.write(test_runner_code)
+
     if os.path.exists(os.path.join(HOST_DIR, TEST_CASE_FILE)):
         os.remove(os.path.join(HOST_DIR, TEST_CASE_FILE))
     if test_cases:
         test_case_path = os.path.join(HOST_DIR, TEST_CASE_FILE)
-        with open(test_case_path, 'w') as f:
+        with open(test_case_path, "w") as f:
             f.write(test_cases)
 
     container_volumes = {HOST_DIR: {"bind": CONTAINER_DIR, "mode": "rw"}}
@@ -68,93 +199,10 @@ def run_container(client, zip_file_name, test_cases=None):
                 if [ -f {CONTAINER_DIR}/{TEST_CASE_FILE} ]; then
                   echo 'TEST_CASES' &&
                   rm -f /tmp/test_results.json &&
-                  python3 -c '
-import sys
-import json
-import subprocess
-import time
-import os
-
-# Read test cases file
-with open("{CONTAINER_DIR}/{TEST_CASE_FILE}", "r") as f:
-    test_content = f.read().strip()
-
-# Parse test cases - format is:
-# first line = number of lines in test case
-# remaining lines = input and expected output
-# (where the last line has the expected output)
-lines = test_content.split("\\n")
-results = []
-i = 0
-
-while i < len(lines):
-    if not lines[i].strip():
-        i += 1
-        continue
-
-    try:
-        # First line indicates number of lines in this test case
-        num_lines = int(lines[i].strip())
-
-        if i + num_lines >= len(lines):
-            break
-
-        # Extract all lines for this test case
-        test_input = "\\n".join(lines[i:i+num_lines])
-        expected_output = lines[i+num_lines-1].split(" ", 1)[1] if " " in lines[i+num_lines-1] else ""
-
-        # Prepare the input file
-        with open("/tmp/current_input.txt", "w") as f:
-            f.write(test_input)
-
-        # Execute the test
-        test_start = time.time() * 1000
-        proc = subprocess.Popen(
-            ["python", "{TEMP_DIR}/{script_base_name}.py"],
-            stdin=open("/tmp/current_input.txt", "r"),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        actual_output, errors = proc.communicate()
-        test_end = time.time() * 1000
-
-        # Calculate metrics
-        test_runtime = int(test_end - test_start)
-
-        # Get memory usage
-        memory_usage = 0
-        try:
-            pid_str = str(proc.pid)
-            memory_usage = int(os.popen("ps -o rss= -p " + pid_str).read().strip())
-        except:
-            pass
-
-        # Check if output matches expected
-        actual = actual_output.strip()
-        passed = actual == expected_output.strip()
-
-        results.append({{
-            "input": test_input,
-            "expected": expected_output,
-            "actual": actual,
-            "passed": passed,
-            "runtime": test_runtime,
-            "memory": memory_usage
-        }})
-
-        # Move to next test case
-        i += num_lines
-
-    except (ValueError, IndexError):
-        # Skip invalid lines
-        i += 1
-
-print(json.dumps(results))
-' > /tmp/test_results.json &&
+                  python3 {CONTAINER_DIR}/test_runner.py {CONTAINER_DIR}/{TEST_CASE_FILE} "$target_file" > /tmp/test_results.json &&
                   cat /tmp/test_results.json
                 else
-                  python "$target_file" 2>&1
+                  python "$target_file" 2>&1 bo
                 fi &&
                 end_time=$(date +%s%3N) &&
                 runtime=$((end_time - start_time)) &&
