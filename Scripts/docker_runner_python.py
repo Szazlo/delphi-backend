@@ -89,9 +89,33 @@ def run_tests(test_file_path, target_file):
                     bufsize=1  # Line buffered
                 )
                 
+                # Start memory monitoring
+                import psutil
+                process = psutil.Process(proc.pid)
+                max_memory = 0
+                
+                # Create a thread to monitor memory
+                def monitor_memory():
+                    nonlocal max_memory
+                    while proc.poll() is None:  # While process is running
+                        try:
+                            current_memory = process.memory_info().rss / 1024  # Convert to KB
+                            max_memory = max(max_memory, current_memory)
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            break
+                        time.sleep(0.1)  # Check every 100ms
+                
+                import threading
+                memory_thread = threading.Thread(target=monitor_memory)
+                memory_thread.daemon = True
+                memory_thread.start()
+                
                 # Send each input line
                 actual_output, errors = proc.communicate(input=test_input + "\\n", timeout=5)
                 test_end = time.time() * 1000
+                
+                # Wait for memory monitoring to finish
+                memory_thread.join(timeout=0.5)
                 
                 print(f"Raw output: {actual_output!r}", file=sys.stderr)
                 if errors:
@@ -99,14 +123,6 @@ def run_tests(test_file_path, target_file):
                 
                 # Calculate metrics
                 test_runtime = int(test_end - test_start)
-                
-                # Get memory usage
-                memory_usage = 0
-                try:
-                    pid_str = str(proc.pid)
-                    memory_usage = int(os.popen("ps -o rss= -p " + pid_str).read().strip())
-                except Exception as e:
-                    print(f"Error getting memory usage: {str(e)}", file=sys.stderr)
                 
                 # Check if output matches expected
                 actual = actual_output.strip()
@@ -120,7 +136,7 @@ def run_tests(test_file_path, target_file):
                     "expected": expected_output,
                     "actual": actual,
                     "status": "Passed" if passed else "Failed",
-                    "memory": memory_usage,
+                    "memory": int(max_memory),  # Use the maximum memory observed
                     "runtime": test_runtime,
                     "error": errors.strip() if errors else None
                 }

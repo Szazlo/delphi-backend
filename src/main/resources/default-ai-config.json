@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "id": "gpt-4o-mini",
+            "model": "gpt-4o-mini",
+            "systemPrompt": "You are an expert code reviewer and software architect with extensive experience in best practices, design patterns, and software engineering principles. Your task is to provide comprehensive, actionable feedback for improving code quality.",
+            "analysisPrompt": "Please analyze this codebase and provide detailed feedback on the following aspects:\n\n1. Architecture and Design:\n   - Overall structure and organization\n   - Design patterns usage\n   - Component relationships\n   - Modularity and coupling\n\n2. Code Quality:\n   - Code readability and maintainability\n   - Method and class organization\n   - Naming conventions\n   - Code duplication\n\n3. Best Practices:\n   - SOLID principles adherence\n   - Error handling\n   - Documentation\n   - Testing approach\n\n4. Security:\n   - Potential vulnerabilities\n   - Authentication/Authorization\n   - Data validation\n   - Secure coding practices\n\n5. Performance:\n   - Resource usage\n   - Optimization opportunities\n   - Scalability considerations\n\nPlease provide specific examples and suggestions for improvement where applicable, however don't provide the specific solution, just the feedback. The response should only contain the feedback organized as per the sections, no other text.",
+            "temperature": 0.7,
+            "maxTokens": 2000,
+            "active": true
+        },
+        {
+            "id": "gpt-o3-mini",
+            "model": "gpt-o3-mini",
+            "systemPrompt": "You are a code reviewer focused on providing clear and concise feedback on code quality and best practices.",
+            "analysisPrompt": "Please analyze this codebase and provide feedback on:\n\n1. Code Quality:\n   - Readability and maintainability\n   - Organization and structure\n   - Naming conventions\n\n2. Best Practices:\n   - Error handling\n   - Documentation\n   - Testing\n\n3. Performance:\n   - Resource usage\n   - Optimization opportunities\n\nPlease provide specific examples and suggestions for improvement where applicable.",
+            "temperature": 0.7,
+            "maxTokens": 1000,
+            "active": false
+        }
+    ]
+} 

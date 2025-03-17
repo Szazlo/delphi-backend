@@ -24,7 +24,7 @@ public class Submissions {
     @Column(length = 10000)
     private String lint_output;
 
-    @Column(length = 10000)
+    @Column(columnDefinition = "TEXT")
     private String ai_output;
 
     @Column(name="runtime")
