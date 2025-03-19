@@ -30,7 +30,6 @@ def run_tests(test_file_path, target_file):
             
             print(f"Running test with input: {test_input!r}", file=sys.stderr)
             
-            # Execute the test
             test_start = time.time() * 1000
             try:
                 proc = subprocess.Popen(
@@ -75,7 +74,6 @@ def run_tests(test_file_path, target_file):
                 if errors:
                     print(f"Errors: {errors!r}", file=sys.stderr)
                 
-                # Calculate metrics
                 test_runtime = int(test_end - test_start)
                 
                 # Check if output matches expected

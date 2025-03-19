@@ -33,6 +33,9 @@ public class Submissions {
     @Column(name="memory")
     private Integer memory; // in KB
 
+    @Column(name="grade")
+    private Double grade; // Grade as a percentage (0-100)
+
     private String timestamp;
 
     private String status;
@@ -106,6 +109,14 @@ public class Submissions {
 
     public void setMemoryUsage(Integer memory) {
         this.memory = memory;
+    }
+
+    public Double getGrade() {
+        return grade;
+    }
+
+    public void setGrade(Double grade) {
+        this.grade = grade;
     }
 
     public String getTimestamp() {

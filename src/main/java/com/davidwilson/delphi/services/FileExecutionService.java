@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.List;
+import java.util.Map;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -17,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class FileExecutionService {
@@ -189,6 +191,42 @@ public class FileExecutionService {
             String jsonResults = testCaseText.substring(jsonArrayStart, jsonArrayEnd);
             submission.setTestResults(jsonResults);
 
+            try {
+                List<Map<String, Object>> results = new ObjectMapper().readValue(jsonResults, List.class);
+                int totalTests = results.size();
+                int passedTests = (int) results.stream()
+                    .filter(result -> "Passed".equals(result.get("status")))
+                    .count();
+                
+                // Calculate test case score
+                double testScore = totalTests > 0 ? (passedTests * 70.0) / totalTests : 0;
+                
+                // Calculate linting score
+                double lintScore = 0;
+                String lintOutput = submission.getLintOutput();
+                if (lintOutput != null && !lintOutput.isEmpty()) {
+                    // Extract the numerical score from the linting output
+                    int scoreStart = lintOutput.lastIndexOf("Your code has been rated at ");
+                    int scoreEnd = lintOutput.lastIndexOf("/10");
+                    if (scoreStart >= 0 && scoreEnd > scoreStart) {
+                        try {
+                            String scoreStr = lintOutput.substring(scoreStart + 25, scoreEnd).trim();
+                            double lintRating = Double.parseDouble(scoreStr);
+                            // Scale the linting score to 0-30 points
+                            lintScore = (lintRating * 30.0) / 10.0;
+                        } catch (NumberFormatException e) {
+                            logger.error("Error parsing linting score: {}", e.getMessage());
+                        }
+                    }
+                }
+                
+                // Final grade as a percentage
+                submission.setGrade(testScore + lintScore);
+            } catch (Exception e) {
+                logger.error("Error calculating grade: ", e);
+                submission.setGrade(0.0);
+            }
+
             if (jsonArrayStart > 0) {
                 submission.setOutput(testCaseText.substring(0, jsonArrayStart).trim());
             } else {
@@ -197,6 +235,7 @@ public class FileExecutionService {
         } else {
             submission.setTestResults("");
             submission.setOutput(testCaseText);
+            submission.setGrade(0.0);
         }
     }
 
