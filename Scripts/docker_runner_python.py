@@ -10,7 +10,6 @@ import uuid
 import time
 import subprocess
 
-# Constants
 IMAGE_NAME = "python-runner"
 CONTAINER_NAME = f"python_container_{uuid.uuid4().hex[:8]}"
 HOST_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../uploads"))
@@ -19,7 +18,6 @@ TEMP_DIR = "/tmp/unzipped"
 TEST_CASE_FILE = "test_cases.txt"
 
 def build_image(client):
-    # Build image if not existing
     try:
         client.images.get(IMAGE_NAME)
         print(f"Docker image '{IMAGE_NAME}' already exists.")
@@ -40,10 +38,8 @@ def run_container(client, zip_file_name, test_cases=None):
         print("Error: No zip file specified.")
         sys.exit(1)
 
-    # Extract the base name without .zip extension to use as the script name
     script_base_name = os.path.splitext(zip_file_name)[0]
 
-    # Write test execution script
     test_runner_code = '''#!/usr/bin/env python3
 import sys
 import json
@@ -76,7 +72,6 @@ def run_tests(test_file_path, target_file):
             
             print(f"Running test with input: {test_input!r}", file=sys.stderr)
             
-            # Execute the test
             test_start = time.time() * 1000
             try:
                 proc = subprocess.Popen(
@@ -121,7 +116,6 @@ def run_tests(test_file_path, target_file):
                 if errors:
                     print(f"Errors: {errors!r}", file=sys.stderr)
                 
-                # Calculate metrics
                 test_runtime = int(test_end - test_start)
                 
                 # Check if output matches expected
@@ -237,16 +231,13 @@ if __name__ == "__main__":
             detach=True
         )
 
-        # Capture the output
         output = ""
         for log in container.logs(stream=True):
             output += log.decode('utf-8')
 
-        # Get exit code
         result = container.wait()
         exit_code = result.get('StatusCode', 1)
 
-        # Clean up
         try:
             container.remove()
         except docker.errors.APIError:

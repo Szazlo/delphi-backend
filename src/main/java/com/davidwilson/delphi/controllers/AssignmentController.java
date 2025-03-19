@@ -4,10 +4,15 @@ import com.davidwilson.delphi.entities.Assignment;
 import com.davidwilson.delphi.entities.AssignmentGroup;
 import com.davidwilson.delphi.entities.Group;
 import com.davidwilson.delphi.entities.TestCase;
+import com.davidwilson.delphi.entities.Submissions;
+import com.davidwilson.delphi.config.AIConfiguration;
 import com.davidwilson.delphi.repositories.AssignmentRepository;
 import com.davidwilson.delphi.repositories.TestCaseRepository;
 import com.davidwilson.delphi.repositories.AssignmentGroupRepository;
+import com.davidwilson.delphi.repositories.SubmissionRepository;
 import com.davidwilson.delphi.services.AssignmentService;
+import com.davidwilson.delphi.services.AIConfigurationService;
+import com.davidwilson.delphi.services.AIAnalysisService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,12 +38,79 @@ public class AssignmentController {
     private AssignmentGroupRepository assignmentGroupRepository;
 
     @Autowired
+    private SubmissionRepository submissionRepository;
+
+    @Autowired
     private AssignmentService assignmentService;
+
+    @Autowired
+    private AIConfigurationService aiConfigurationService;
+
+    @Autowired
+    private AIAnalysisService aiAnalysisService;
 
     @GetMapping("/{id}")
     public ResponseEntity<Assignment> getAssignment(@PathVariable UUID id) {
         Optional<Assignment> assignment = assignmentRepository.findById(id);
         return assignment.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{id}/submissions")
+    public ResponseEntity<List<Submissions>> getLatestSubmissionsPerUser(@PathVariable UUID id) {
+        List<Submissions> submissions = submissionRepository.findLatestSubmissionsPerUserForAssignment(id);
+        if (submissions.isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        }
+        
+        // Sort by timestamp in descending order (newest first)
+        submissions.sort((o1, o2) -> o2.getTimestamp().compareTo(o1.getTimestamp()));
+        return new ResponseEntity<>(submissions, HttpStatus.OK);
+    }
+
+    @GetMapping("/{id}/submissions/analyze")
+    public ResponseEntity<String> analyzeSubmissionsSubset(@PathVariable UUID id) {
+        // Get all latest submissions per user
+        List<Submissions> allSubmissions = submissionRepository.findLatestSubmissionsPerUserForAssignment(id);
+        
+        if (allSubmissions.isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        }
+
+        // Calculate subset size (1/10th of total submissions, minimum 2)
+        if (allSubmissions.size() < 2) {
+            return new ResponseEntity<>("Not enough submissions to analyze", HttpStatus.NO_CONTENT);
+        }
+        int subsetSize = Math.max(2, allSubmissions.size() / 10);
+        
+        // Take the first subsetSize submissions
+        List<Submissions> subset = allSubmissions.subList(0, subsetSize);
+        
+        // Build the prompt for analysis
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("You are an expert code reviewer analyzing student submissions. Focus on identifying patterns and common issues across the submissions.\n\n");
+        prompt.append("For each submission, analyze:\n");
+        prompt.append("1. Code structure and organization\n");
+        prompt.append("2. Algorithm implementation\n");
+        prompt.append("3. Error handling\n");
+        prompt.append("4. Code style and readability\n\n");
+        prompt.append("Provide a concise summary in this format:\n\n");
+        prompt.append("COMMON ISSUES:\n");
+        prompt.append("- List the 3-5 most frequent issues found across submissions\n");
+        prompt.append("- For each issue, briefly explain why it's problematic\n\n");
+        prompt.append("OVERALL FEEDBACK:\n");
+        prompt.append("- 2-3 key points about the general quality of submissions\n");
+        prompt.append("- 1-2 specific suggestions for improvement\n\n");
+        prompt.append("Submissions to analyze:\n\n");
+        
+        for (Submissions submission : subset) {
+            prompt.append("Submission from user ").append(submission.getUserId()).append(":\n");
+            prompt.append(submission.getAIOutput()).append("\n\n");
+        }
+        
+        // Call the AI service to analyze
+        String analysis = aiAnalysisService.analyzeSubmissionText(prompt.toString());
+        
+        return new ResponseEntity<>(analysis, HttpStatus.OK);
     }
 
     // Create an assignment for a group

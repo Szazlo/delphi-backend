@@ -82,6 +82,23 @@ public class AIAnalysisService {
         }
     }
 
+    public String analyzeSubmissionText(String prompt) {
+        // First check if AI analysis is enabled
+        Optional<AIConfiguration> activeConfig = configService.getActiveConfiguration();
+        if (activeConfig.isEmpty() || !activeConfig.get().isActive()) {
+            logger.info("AI analysis is disabled - no active configuration found or configuration is inactive");
+            return null;
+        }
+
+        try {
+            // Call LLM API directly with the prompt
+            return callLLMAPI(prompt);
+        } catch (Exception e) {
+            logger.error("Error analyzing submission text", e);
+            return "Error analyzing submissions: " + e.getMessage();
+        }
+    }
+
     private List<FileContent> readProjectFiles(String projectPath) throws IOException {
         List<FileContent> files = new ArrayList<>();
         Path basePath = Paths.get(projectPath).toAbsolutePath();
