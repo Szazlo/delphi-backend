@@ -90,6 +90,14 @@ public class GroupController {
     public ResponseEntity<UserGroup> addUserToGroup(@PathVariable UUID groupId, @RequestParam String userId, @RequestParam(defaultValue = "member") String role) {
         Optional<Group> group = groupRepository.findById(groupId);
         if (group.isPresent()) {
+            List<UserGroup> existingMemberships = userGroupRepository.findByUserId(userId);
+            boolean alreadyMember = existingMemberships.stream()
+                    .anyMatch(membership -> membership.getGroup().getId().equals(groupId));
+
+            if (alreadyMember) {
+                return ResponseEntity.ok().build();
+            }
+
             UserGroup userGroup = new UserGroup();
             userGroup.setUserId(userId);
             userGroup.setGroup(group.get());

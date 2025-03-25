@@ -41,13 +41,13 @@ public class SubmissionController {
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<Submissions>> getSubmissionsForUser(
             @PathVariable String userId,
-            @RequestParam(required = false) Boolean withReviewRequest) {
+            @RequestParam(required = false) Boolean withReviewRequests) {
         List<Submissions> submissions = submissionRepository.findByUserId(userId);
         if (submissions.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
 
-        if (Boolean.TRUE.equals(withReviewRequest)) {
+        if (Boolean.TRUE.equals(withReviewRequests)) {
             submissions.removeIf(submission -> !submissionReviewsRepository.existsBySubmissionId(submission.getId().toString()));
         }
 

@@ -197,9 +197,9 @@ public class FileExecutionService {
                 int passedTests = (int) results.stream()
                     .filter(result -> "Passed".equals(result.get("status")))
                     .count();
-                
+
                 // Calculate test case score
-                double testScore = totalTests > 0 ? (passedTests * 70.0) / totalTests : 0;
+                double testScore = totalTests > 0 ? (passedTests * 70.0) / totalTests : 70.0;
                 
                 // Calculate linting score
                 double lintScore = 0;
@@ -210,15 +210,15 @@ public class FileExecutionService {
                     int scoreEnd = lintOutput.lastIndexOf("/10");
                     if (scoreStart >= 0 && scoreEnd > scoreStart) {
                         try {
-                            String scoreStr = lintOutput.substring(scoreStart + 25, scoreEnd).trim();
+                            String scoreStr = lintOutput.substring(scoreStart + 28, scoreEnd).trim();
                             double lintRating = Double.parseDouble(scoreStr);
-                            // Scale the linting score to 0-30 points
-                            lintScore = (lintRating * 30.0) / 10.0;
+                            lintScore = (lintRating * 3.0);
                         } catch (NumberFormatException e) {
                             logger.error("Error parsing linting score: {}", e.getMessage());
                         }
                     }
                 }
+                logger.info("Total tests: {}, Passed tests: {}, Test score: {}, Lint score: {}", totalTests, passedTests, testScore, lintScore);
                 
                 // Final grade as a percentage
                 submission.setGrade(testScore + lintScore);
