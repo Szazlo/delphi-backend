@@ -151,6 +151,9 @@ public class AssignmentController {
                     case "maxScore":
                         existingAssignment.setMaxScore((Integer) value);
                         break;
+                    case "gradeWeight":
+                        existingAssignment.setGradeWeight((Integer) value);
+                        break;
                 }
             });
 

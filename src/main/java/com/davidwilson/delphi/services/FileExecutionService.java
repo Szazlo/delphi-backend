@@ -193,13 +193,14 @@ public class FileExecutionService {
 
             try {
                 List<Map<String, Object>> results = new ObjectMapper().readValue(jsonResults, List.class);
+                int testWeight = submission.getAssignment().getGradeWeight();
                 int totalTests = results.size();
                 int passedTests = (int) results.stream()
                     .filter(result -> "Passed".equals(result.get("status")))
                     .count();
 
                 // Calculate test case score
-                double testScore = totalTests > 0 ? (passedTests * 70.0) / totalTests : 70.0;
+                double testScore = totalTests > 0 ? (double) (passedTests * testWeight) / totalTests : testWeight;
                 
                 // Calculate linting score
                 double lintScore = 0;
@@ -212,7 +213,7 @@ public class FileExecutionService {
                         try {
                             String scoreStr = lintOutput.substring(scoreStart + 28, scoreEnd).trim();
                             double lintRating = Double.parseDouble(scoreStr);
-                            lintScore = (lintRating * 3.0);
+                            lintScore = (lintRating * ((double) (100 - testWeight) / 10)); // Scale to 0-100
                         } catch (NumberFormatException e) {
                             logger.error("Error parsing linting score: {}", e.getMessage());
                         }

@@ -42,6 +42,9 @@ public class AssignmentService {
 
         assignment.setMemoryLimit((Integer) assignmentData.get("memory_limit"));
         assignment.setMaxScore((Integer) assignmentData.get("max_score"));
+
+        assignment.setGradeWeight((Integer) assignmentData.get("grade_weight"));
+
         assignment.setGroup(group);
 
         if (assignmentData.containsKey("due_date")) {

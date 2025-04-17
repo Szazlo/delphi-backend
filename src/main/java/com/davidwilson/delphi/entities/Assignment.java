@@ -26,6 +26,7 @@ public class Assignment {
     private Float timeLimit = 2.0f;
     private Integer memoryLimit = 256;
     private Integer maxScore = 100;
+    private Integer gradeWeight = 70;
 
     public UUID getId() {
         return id;
@@ -98,4 +99,8 @@ public class Assignment {
     public void setMaxScore(Integer maxScore) {
         this.maxScore = maxScore;
     }
+
+    public Integer getGradeWeight() { return gradeWeight; }
+
+    public void setGradeWeight(Integer gradeWeight) { this.gradeWeight = gradeWeight; }
 }
