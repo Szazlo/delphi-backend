@@ -29,8 +29,7 @@ Authentication and role-based access control (RBAC) are handled through **Keyclo
 ---
 
 ## Frontend Repository
-
-👉 **Frontend Repository Link:** [Frontend](https://github.com/Szazlo/delphi-frontend)
+**Frontend Repository Link:** [Frontend](https://github.com/Szazlo/delphi-frontend)
 
 ---
 
